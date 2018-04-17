@@ -10,9 +10,11 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.*;
 
-public class UserInterface extends Application {
+public final class UserInterface extends Application {
 
 	Entry entry = null;
+	static int dayOffset = 0;
+	static boolean isShown = false;
 
 	@Override
 	public void start(Stage primaryStage) {
@@ -54,8 +56,10 @@ public class UserInterface extends Application {
 			@Override
 			public void handle(ActionEvent event)
 			{
-				entry = new Entry(tf.getText());
-				writeStart(entry);
+				if (isShown) { 
+					dayOffset--;
+					ta.setText(resultToString()); 
+				}
 			}
 		});
 		
@@ -65,7 +69,8 @@ public class UserInterface extends Application {
 			@Override
 			public void handle(ActionEvent event)
 			{
-				ta.setText(resultToString());
+				ta.setText(isShown ? "" : resultToString());
+				isShown = !isShown;
 			}
 		});
 
@@ -75,8 +80,10 @@ public class UserInterface extends Application {
 			@Override
 			public void handle(ActionEvent event)
 			{
-				writeEnd(entry);
-				tf.setText("");
+				if (isShown) { 
+					dayOffset++;
+					ta.setText(resultToString()); 
+				}
 			}
 		});
 
@@ -112,32 +119,29 @@ public class UserInterface extends Application {
 	}
 	
 	private static String resultToString() {
-		Calendar cal = Calendar.getInstance();
+		
 		String str = "";
 		int total = 0;
 		// Map map = new HashMap<Calendar, ArrayList<Entry>>();
 		// TODO 
 		File file = new File("text.txt");
+		CustomDate today = new CustomDate();
 		try(Scanner scan = new Scanner(file)) {
 			scan.nextLine();
 			
 			while (scan.hasNextLine()) {
 				String subject = scan.next();
-				long startDate = scan.nextLong();
-				long endDate = scan.nextLong();
+				long startDateSeconds = scan.nextLong();
+				long endDateSeconds = scan.nextLong();
 				
-				int duration = (int) ((endDate - startDate) / 1000l);
-				total += duration;
-				str += subject + " " + secondsToDate(duration) + "\n";
-				//System.out.println("Hours: " + numberOfHours + " - " + "Minutes: " + numberOfMinutes + " - " + "Seconds: " + numberOfSeconds);
-				
-				Date date = new Date(startDate);
-				cal.setTime(date);
-				int month = getMonth(cal);
-				System.out.println("Month: " + month);
-				
-				int dayOfMonth = getDayOfMonth(cal);
-				System.out.println("Day of Month: " + dayOfMonth);
+				CustomDate thisDay = new CustomDate(startDateSeconds);
+				//System.out.println(thisDay.dayDifference(today));
+                if (CustomDate.dayDifference(thisDay, today) == dayOffset) {
+                	int duration = (int) ((endDateSeconds - startDateSeconds) / 1000l);
+    				total += duration;
+    				str += subject + " " + secondsToDate(duration) + "\n";
+                }
+							
 			}
 						
 		} catch(IOException e) {
@@ -154,14 +158,6 @@ public class UserInterface extends Application {
 		int numberOfHours = remainder / 60;
 		int numberOfMinutes = remainder % 60;
 		return numberOfHours + ":" + numberOfMinutes + ":" + numberOfSeconds;
-	}
-	
-	private static int getMonth(Calendar cal) {
-		return cal.get(Calendar.MONTH);
-	}
-	
-	private static int getDayOfMonth(Calendar cal) {
-		return cal.get(Calendar.DAY_OF_MONTH);
 	}
 
 	public static void main(String[] args)

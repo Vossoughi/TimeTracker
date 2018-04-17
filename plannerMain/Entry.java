@@ -22,7 +22,7 @@ public class Entry {
 	public Entry(String subject, String note) {
 		this.subject = subject;
 		this.note = note;
-		start = new Date();
+		start = new CustomDate();
 	}
 	
 	public Entry(String subject) {
@@ -52,7 +52,7 @@ public class Entry {
 	}
 	
 	public long getEndDate() {
-		end = new Date();
+		end = new CustomDate();
 		return end.getTime();
 	}
 	
