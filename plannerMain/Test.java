@@ -6,6 +6,5 @@ public class Test {
 		CustomDate a = new CustomDate(0);
 		CustomDate b = new CustomDate(86400001 * 2);
 		System.out.println(CustomDate.dayDifference(a, b));
-
 	}
 }
