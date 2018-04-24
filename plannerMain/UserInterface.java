@@ -3,12 +3,17 @@
  */
 package plannerMain;
 
+import java.text.*;
+import java.util.*;
+
+import javafx.animation.*;
 import javafx.application.Application;
 import javafx.event.*;
 import javafx.scene.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.*;
+import javafx.util.Duration;
 
 /**
  * @author Kaveh Vossoughi
@@ -18,8 +23,9 @@ public final class UserInterface extends Application {
 
 	Entry entry = null;
 	static int dayOffset = 0;
-	static boolean isShown = false;
+	static boolean isHistoryShown = false;
 	static final String FILEPATH = "test.txt";
+	Timeline timeline;
 
 	Button btnStart = new Button("Start");
 	Button btnStop = new Button("Stop");
@@ -33,6 +39,7 @@ public final class UserInterface extends Application {
 	@Override
 	public void start(Stage primaryStage) {
 		
+		primaryStage.setResizable(false);
 		ta.setEditable(false);
 		PlannerReaderWriter reader = new PlannerReaderWriter(FILEPATH);
 
@@ -45,6 +52,25 @@ public final class UserInterface extends Application {
 				entry = new Entry(tf.getText());
 				reader.writeStart(entry);
 				setDisplayHistoryDisabled(true);
+				ta.setText("Recording...");
+				isHistoryShown = false;
+				tf.setEditable(false);
+				
+				Date a = new Date();
+				long start = a.getTime();
+				DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
+				timeline = new Timeline(
+				    new KeyFrame(
+				        Duration.millis(500),
+				        innerEvent -> {
+				            final long diff = System.currentTimeMillis() - start;
+				                // System.out.println(System.currentTimeMillis() - start );
+				                ta.setText("Recording...\n" + timeFormat.format(diff));
+				        }
+				    )
+				);
+				timeline.setCycleCount(Animation.INDEFINITE);
+				timeline.play();
 			}
 		});
 
@@ -56,7 +82,10 @@ public final class UserInterface extends Application {
 			{
 				reader.writeEnd(entry);
 				tf.setText("");
+				tf.setEditable(true);
 				setDisplayHistoryDisabled(false);
+				ta.setText("");
+				timeline.stop();
 			}
 		});
 		
@@ -66,7 +95,7 @@ public final class UserInterface extends Application {
 			@Override
 			public void handle(ActionEvent event)
 			{
-				if (isShown) { ta.setText(reader.getRecords(--dayOffset)); }
+				if (isHistoryShown) { ta.setText(reader.getRecords(--dayOffset)); }
 			}
 		});
 		
@@ -76,8 +105,8 @@ public final class UserInterface extends Application {
 			@Override
 			public void handle(ActionEvent event)
 			{
-				ta.setText(isShown ? "" : reader.getRecords(dayOffset));
-				isShown = !isShown;
+				ta.setText(isHistoryShown ? "" : reader.getRecords(dayOffset));
+				isHistoryShown = !isHistoryShown;
 			}
 		});
 
@@ -87,7 +116,7 @@ public final class UserInterface extends Application {
 			@Override
 			public void handle(ActionEvent event)
 			{
-				if (isShown) { ta.setText(reader.getRecords(++dayOffset)); }
+				if (isHistoryShown) { ta.setText(reader.getRecords(++dayOffset)); }
 			}
 		});
 

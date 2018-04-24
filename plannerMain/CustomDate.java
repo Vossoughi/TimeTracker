@@ -11,6 +11,8 @@ import java.util.*;
  */
 public final class CustomDate extends Date {
 	
+	private static final long serialVersionUID = 2964932519218549741L;
+	
 	Calendar cal = Calendar.getInstance();
 	
 	public CustomDate() {
