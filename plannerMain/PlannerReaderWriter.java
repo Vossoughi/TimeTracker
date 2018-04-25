@@ -13,11 +13,9 @@ import java.util.*;
 public final class PlannerReaderWriter {
 
 	private String filePath;
-	// Map map;
 
 	public PlannerReaderWriter(String filePath) {
 		this.filePath = filePath;
-		// map = new HashMap<Calendar, ArrayList<Entry>>();
 	}
 	
 	public String getRecords(int dayOffset) {
@@ -33,8 +31,7 @@ public final class PlannerReaderWriter {
 				long startDateSeconds = scan.nextLong();
 				long endDateSeconds = scan.nextLong();
 				
-				CustomDate thisDay = new CustomDate(startDateSeconds);
-				//System.out.println(thisDay.dayDifference(today));
+				CustomDate thisDay = new CustomDate(startDateSeconds);		
                 if (CustomDate.dayDifference(thisDay, today) == dayOffset) {
                 	int duration = (int) ((endDateSeconds - startDateSeconds) / 1000l);
     				totalHours += duration;
@@ -66,6 +63,28 @@ public final class PlannerReaderWriter {
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
 		}
+	}
+	
+	public boolean checkFile() {
+		boolean fileOK = true;
+		File file = new File(filePath);
+		try(Scanner scan = new Scanner(file)) {
+			scan.nextLine();
+			while (scan.hasNextLine() && fileOK) {
+				scan.next();
+				String startTime = scan.next();
+				String endTime = scan.next();
+				try {
+					Long.parseLong(startTime);
+					Long.parseLong(endTime);
+				} catch (NumberFormatException e) {
+					fileOK = false;
+				}
+			}	
+		} catch(IOException e) {
+			System.err.println(e.getMessage());
+		}
+		return fileOK;
 	}
 	
 	private String secondsToDate(int duration) {
