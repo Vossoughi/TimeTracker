@@ -3,13 +3,14 @@
  */
 package plannerMain;
 
+import java.io.File;
 import java.text.*;
 import java.util.*;
 
 import javafx.animation.*;
 import javafx.application.Application;
 import javafx.event.*;
-import javafx.geometry.Rectangle2D;
+import javafx.geometry.*;
 import javafx.scene.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -21,11 +22,11 @@ import javafx.util.Duration;
  *
  */
 public final class UserInterface extends Application {
-	static final String FILE_PATH = "test.txt";
 	
 	Entry entry = null;
 	int dayOffset = 0;
 	boolean isHistoryShown = false;
+	boolean isRecording = false;
 	String timeSpent = "00:00:00";
 	TimeZone tz = TimeZone.getTimeZone("GMT");
 	Timeline timeline;
@@ -36,7 +37,9 @@ public final class UserInterface extends Application {
 	TextArea ta = new TextArea();
 	Button btnPrevious = new Button("Previous");
 	Button btnShowHide = new Button("Show/Hide");
+	Button btnChooseFile = new Button("Choose file");
 	Button btnNext = new Button("Next");
+	Label statusLabel = new Label();
 	Label errorLabel;
 	
 	
@@ -45,18 +48,19 @@ public final class UserInterface extends Application {
 		
 		primaryStage.setResizable(false);
 		ta.setEditable(false);
-		PlannerReaderWriter reader = new PlannerReaderWriter(FILE_PATH);
+		PlannerReaderWriter reader = new PlannerReaderWriter();
 
 		btnStart.setOnAction(new EventHandler<ActionEvent>()
 		{
 			@Override
 			public void handle(ActionEvent event)
 			{
-				entry = new Entry(tf.getText());
+				if (tf.getText().replaceAll("\\s","").equals("")) { return; }
+				entry = new Entry(tf.getText().replaceAll("\\s",""));
 				reader.writeStart(entry);
 				setDisplayHistoryDisabled(true);
-				ta.setText("Recording...");
 				isHistoryShown = false;
+				isRecording = true;
 				tf.setEditable(false);
 				
 				long start = System.currentTimeMillis();
@@ -68,7 +72,7 @@ public final class UserInterface extends Application {
 				        innerEvent -> {
 				            final long diff = System.currentTimeMillis() - start;
 				            timeSpent = timeFormat.format(diff);
-				            ta.setText("Recording...\n" + timeSpent);
+				            statusLabel.setText("Recording...\n" + timeSpent);
 				        }
 				    )
 				);
@@ -87,7 +91,8 @@ public final class UserInterface extends Application {
 				tf.setText("");
 				tf.setEditable(true);
 				setDisplayHistoryDisabled(false);
-				ta.setText("Stopped\n" + timeSpent);
+				isRecording = false;
+				statusLabel.setText("Stopped\n" + timeSpent);
 				timeline.stop();
 			}
 		});
@@ -109,11 +114,11 @@ public final class UserInterface extends Application {
 			public void handle(ActionEvent event)
 			{
 				if(!reader.checkFile()) {
-					popUpErrorWindow("The file format is incorrect", primaryStage);
-				}
-				
+					popUpWindow("File Error", "The file format is incorrect", false);
+				} else {
 				ta.setText(isHistoryShown ? "" : reader.getRecords(dayOffset));
 				isHistoryShown = !isHistoryShown;
+				}
 			}
 		});
 
@@ -126,12 +131,26 @@ public final class UserInterface extends Application {
 				if (isHistoryShown) { ta.setText(reader.getRecords(++dayOffset)); }
 			}
 		});
+		
+		btnChooseFile.setOnAction(new EventHandler<ActionEvent>()
+		{
+			@Override
+			public void handle(ActionEvent event)
+			{
+				FileChooser fileChooser = new FileChooser();
+				File file = fileChooser.showOpenDialog(primaryStage);
+				if (file != null) {
+					reader.setFilePath(file.getAbsolutePath(), true);
+				}		
+			}
+		});
 
-		HBox topPane = new HBox(10, btnStart, tf, btnStop);
-		HBox bottomPane = new HBox(48, btnPrevious, btnShowHide, btnNext);
+		HBox topPane = new HBox(10, btnStart, tf, btnStop, statusLabel);
+		topPane.setMinHeight(30);
+		HBox bottomPane = new HBox(30, btnPrevious, btnChooseFile, btnShowHide, btnNext);
 		VBox pane = new VBox(10, topPane, ta, bottomPane);
 
-		Scene scene = new Scene(pane, 300, 250);
+		Scene scene = new Scene(pane, 380, 250);
 
 		primaryStage.setTitle("Planner");
 		primaryStage.setScene(scene);
@@ -140,7 +159,7 @@ public final class UserInterface extends Application {
 		{
 			@Override
 			public void handle(WindowEvent event) {
-				if (entry != null) { reader.writeEnd(entry); }
+				if (entry != null && isRecording) { reader.writeEnd(entry); }
 			}
 		});
 	}
@@ -148,39 +167,60 @@ public final class UserInterface extends Application {
 	private void setDisplayHistoryDisabled(boolean setOn) {
 		btnPrevious.setDisable(setOn);
 		btnNext.setDisable(setOn);
+		btnChooseFile.setDisable(setOn);
 		btnShowHide.setDisable(setOn);
 	}
 	
-	private void popUpErrorWindow(String message, Stage stage) {
+	private void popUpWindow(String title, String message, boolean fatal) {
 		errorLabel = new Label(message);
+		Button btnClose = new Button("Close");
 
-		StackPane secondaryLayout = new StackPane();
-		secondaryLayout.getChildren().add(errorLabel);
+		VBox topPane = new VBox(10, errorLabel, btnClose);
+		topPane.setAlignment(Pos.BASELINE_CENTER);
 
-		Scene secondScene = new Scene(secondaryLayout, 230, 100);
+		Scene secondScene = new Scene(topPane, 230, 100);
 
 		// New window (Stage)
 		Stage newWindow = new Stage();
-		newWindow.setTitle("File Error");
+		newWindow.setTitle("title");
 		newWindow.setScene(secondScene);
+		
+		btnClose.setOnAction(new EventHandler<ActionEvent>()
+		{
+
+			@Override
+			public void handle(ActionEvent event)
+			{
+				if (fatal) { 
+					System.exit(1); 
+				} else {
+					newWindow.close();
+				};
+			}
+		});
 
 		newWindow.initModality(Modality.APPLICATION_MODAL);
 		newWindow.setOnCloseRequest(new EventHandler<WindowEvent>()
 		{
 			@Override
 			public void handle(WindowEvent event) {
-				System.exit(1);
+				if (fatal) { 
+					System.exit(1); 
+				} else {
+					newWindow.close();
+				}
 			}
 		});
 		newWindow.showAndWait();
 		
 		// Set position of second window, related to primary window.
-				//Rectangle2D primScreenBounds = Screen.getPrimary().getVisualBounds();
-				//newWindow.setX((primScreenBounds.getWidth() - newWindow.getWidth()) / 2); 
-				//newWindow.setY((primScreenBounds.getHeight() - newWindow.getHeight()) / 4);
-				//System.out.println(primScreenBounds.getWidth() - newWindow.getWidth() / 2);
-				newWindow.setX(stage.getX() + 200);
-			    newWindow.setY(stage.getY() + 100);
+		Rectangle2D primScreenBounds = Screen.getPrimary().getVisualBounds();
+		newWindow.setX((primScreenBounds.getWidth() - newWindow.getWidth()) / 2); 
+		newWindow.setY((primScreenBounds.getHeight() - newWindow.getHeight()) / 4);
+
+		// Another approach
+		// newWindow.setX(stage.getX() + 200);
+		// newWindow.setY(stage.getY() + 100);
 	}
 
 	public static void main(String[] args)

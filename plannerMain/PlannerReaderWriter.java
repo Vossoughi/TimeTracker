@@ -12,19 +12,47 @@ import java.util.*;
  */
 public final class PlannerReaderWriter {
 
+	final String DEFAULT_FILE_PATH = "test.txt";
+	final String CONFIG_FILE = ".config";
 	private String filePath;
 
 	public PlannerReaderWriter(String filePath) {
 		this.filePath = filePath;
 	}
 	
+	public PlannerReaderWriter() {
+		filePath = this.getFilePath();
+		if (filePath == null) {
+			filePath = DEFAULT_FILE_PATH;
+		}
+	}
+	
+	public void setFilePath(String filePath, boolean isPermanent) {
+		this.filePath = filePath;
+		if (isPermanent) {
+			try(FileWriter writer = new FileWriter(this.filePath, true)) {
+				writer.write(filePath);
+			} catch (IOException e) {
+				System.err.println(e.getMessage());
+			}
+		}
+	}
+	
+	public String getFilePath() {
+		try (Scanner scan = new Scanner(new File(CONFIG_FILE))) {
+			return scan.nextLine();	
+		} catch (IOException e) {
+			System.err.println(e.getMessage());
+			return null;
+		}
+	}
+	
 	public String getRecords(int dayOffset) {
 		String stringToDisplay = "";
 		int totalHours = 0;
         CustomDate today = new CustomDate();
-		File file = new File(filePath);
 		
-		try(Scanner scan = new Scanner(file)) {
+		try (Scanner scan = new Scanner(new File(filePath))) {
 			scan.nextLine();
 			while (scan.hasNextLine()) {
 				String subject = scan.next();
