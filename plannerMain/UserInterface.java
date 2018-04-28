@@ -48,6 +48,9 @@ public final class UserInterface extends Application {
 		
 		primaryStage.setResizable(false);
 		ta.setEditable(false);
+		
+		btnStop.setDisable(true);
+		btnStart.setDefaultButton(true);
 		PlannerReaderWriter reader = new PlannerReaderWriter();
 
 		btnStart.setOnAction(new EventHandler<ActionEvent>()
@@ -58,7 +61,7 @@ public final class UserInterface extends Application {
 				if (tf.getText().replaceAll("\\s","").equals("")) { return; }
 				entry = new Entry(tf.getText().replaceAll("\\s",""));
 				reader.writeStart(entry);
-				setDisplayHistoryDisabled(true);
+				setUItoRecording(true);
 				isHistoryShown = false;
 				isRecording = true;
 				tf.setEditable(false);
@@ -83,14 +86,13 @@ public final class UserInterface extends Application {
 
 		btnStop.setOnAction(new EventHandler<ActionEvent>()
 		{
-
 			@Override
 			public void handle(ActionEvent event)
 			{
 				reader.writeEnd(entry);
 				tf.setText("");
 				tf.setEditable(true);
-				setDisplayHistoryDisabled(false);
+				setUItoRecording(false);
 				isRecording = false;
 				statusLabel.setText("Stopped\n" + timeSpent);
 				timeline.stop();
@@ -149,9 +151,10 @@ public final class UserInterface extends Application {
 		topPane.setMinHeight(30);
 		HBox bottomPane = new HBox(30, btnPrevious, btnChooseFile, btnShowHide, btnNext);
 		VBox pane = new VBox(10, topPane, ta, bottomPane);
-
+		
 		Scene scene = new Scene(pane, 380, 250);
-
+		tf.requestFocus();
+		
 		primaryStage.setTitle("Planner");
 		primaryStage.setScene(scene);
 		primaryStage.show();
@@ -164,7 +167,11 @@ public final class UserInterface extends Application {
 		});
 	}
 	
-	private void setDisplayHistoryDisabled(boolean setOn) {
+	private void setUItoRecording(boolean setOn) {
+		btnStart.setDisable(setOn);
+		btnStop.setDisable(!setOn);
+		btnStart.setDefaultButton(!setOn);
+		btnStop.setDefaultButton(setOn);
 		btnPrevious.setDisable(setOn);
 		btnNext.setDisable(setOn);
 		btnChooseFile.setDisable(setOn);
@@ -175,10 +182,10 @@ public final class UserInterface extends Application {
 		errorLabel = new Label(message);
 		Button btnClose = new Button("Close");
 
-		VBox topPane = new VBox(10, errorLabel, btnClose);
+		VBox topPane = new VBox(10, errorLabel, new Label(""), btnClose);
 		topPane.setAlignment(Pos.BASELINE_CENTER);
 
-		Scene secondScene = new Scene(topPane, 230, 100);
+		Scene secondScene = new Scene(topPane, 280, 100);
 
 		// New window (Stage)
 		Stage newWindow = new Stage();
@@ -187,7 +194,6 @@ public final class UserInterface extends Application {
 		
 		btnClose.setOnAction(new EventHandler<ActionEvent>()
 		{
-
 			@Override
 			public void handle(ActionEvent event)
 			{

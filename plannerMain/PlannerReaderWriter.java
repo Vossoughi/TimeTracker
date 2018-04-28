@@ -12,9 +12,9 @@ import java.util.*;
  */
 public final class PlannerReaderWriter {
 
-	final String DEFAULT_FILE_PATH = "test.txt";
-	final String CONFIG_FILE = ".config";
-	private String filePath;
+	final private String DEFAULT_FILE_PATH = "planner.txt";
+	final private String CONFIG_FILE = ".config";
+	String filePath;
 
 	public PlannerReaderWriter(String filePath) {
 		this.filePath = filePath;
@@ -22,9 +22,6 @@ public final class PlannerReaderWriter {
 	
 	public PlannerReaderWriter() {
 		filePath = this.getFilePath();
-		if (filePath == null) {
-			filePath = DEFAULT_FILE_PATH;
-		}
 	}
 	
 	public void setFilePath(String filePath, boolean isPermanent) {
@@ -39,11 +36,22 @@ public final class PlannerReaderWriter {
 	}
 	
 	public String getFilePath() {
+		File file = new File(CONFIG_FILE);
+
+		if (!file.exists()) {			
+			try(FileWriter writer = new FileWriter(CONFIG_FILE, false)) {
+				writer.write(DEFAULT_FILE_PATH);
+			} catch (IOException e) {
+				System.err.println(e.getMessage());	
+			}
+			return DEFAULT_FILE_PATH;
+		}
+		
 		try (Scanner scan = new Scanner(new File(CONFIG_FILE))) {
 			return scan.nextLine();	
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
-			return null;
+			return DEFAULT_FILE_PATH;
 		}
 	}
 	
