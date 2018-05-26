@@ -27,21 +27,24 @@ public final class UserInterface extends Application {
 	int dayOffset = 0;
 	boolean isHistoryShown = false;
 	boolean isRecording = false;
+	boolean isPaused = false;
+	boolean isCategorized = false;
 	String timeSpent = "00:00:00";
 	TimeZone tz = TimeZone.getTimeZone("GMT");
 	Timeline timeline;
 
 	Button btnStart = new Button("Start");
 	Button btnStop = new Button("Stop");
+	Button btnPause = new Button(" ❚❚ ");
 	TextField tf = new TextField("");
 	TextArea ta = new TextArea();
 	Button btnPrevious = new Button("Previous");
 	Button btnShowHide = new Button("Show/Hide");
 	Button btnChooseFile = new Button("Choose file");
+	Button btnCategorized = new Button("Categorized");
 	Button btnNext = new Button("Next");
 	Label statusLabel = new Label();
 	Label errorLabel;
-	
 	
 	@Override
 	public void start(Stage primaryStage) {
@@ -50,6 +53,7 @@ public final class UserInterface extends Application {
 		ta.setEditable(false);
 		
 		btnStop.setDisable(true);
+		btnPause.setDisable(true);
 		btnStart.setDefaultButton(true);
 		PlannerReaderWriter reader = new PlannerReaderWriter();
 
@@ -60,7 +64,7 @@ public final class UserInterface extends Application {
 			{
 				if (tf.getText().replaceAll("\\s","").equals("")) { return; }
 				entry = new Entry(tf.getText().replaceAll("\\s",""));
-				reader.writeStart(entry);
+				reader.writeDate(entry, true, false);
 				setUItoRecording(true);
 				isHistoryShown = false;
 				isRecording = true;
@@ -89,23 +93,42 @@ public final class UserInterface extends Application {
 			@Override
 			public void handle(ActionEvent event)
 			{
-				reader.writeEnd(entry);
+				reader.writeDate(entry, false, true);
+				
 				tf.setText("");
 				tf.setEditable(true);
 				setUItoRecording(false);
+				pauseRecording();
 				isRecording = false;
 				statusLabel.setText("Stopped\n" + timeSpent);
 				timeline.stop();
 			}
 		});
 		
-		btnPrevious.setOnAction(new EventHandler<ActionEvent>()
+		btnPause.setOnAction(new EventHandler<ActionEvent>()
 		{
-
 			@Override
 			public void handle(ActionEvent event)
 			{
-				if (isHistoryShown) { ta.setText(reader.getRecords(--dayOffset)); }
+				// pauseRecording();
+				if (isPaused) {
+					btnPause.setText(" ❚❚ ");
+					timeline.play();
+				} else {
+					btnPause.setText("Play");
+					timeline.pause();
+				}
+				isPaused = !isPaused;
+				reader.writeDate(entry, false, false);
+			}
+		});
+		
+		btnPrevious.setOnAction(new EventHandler<ActionEvent>()
+		{
+			@Override
+			public void handle(ActionEvent event)
+			{
+				if (isHistoryShown) { ta.setText(reader.getRecords(--dayOffset, isCategorized)); }
 			}
 		});
 		
@@ -118,22 +141,12 @@ public final class UserInterface extends Application {
 				if(!reader.checkFile()) {
 					popUpWindow("File Error", "The file format is incorrect", false);
 				} else {
-				ta.setText(isHistoryShown ? "" : reader.getRecords(dayOffset));
+				ta.setText(isHistoryShown ? "" : reader.getRecords(dayOffset, isCategorized));
 				isHistoryShown = !isHistoryShown;
 				}
 			}
 		});
 
-		btnNext.setOnAction(new EventHandler<ActionEvent>()
-		{
-
-			@Override
-			public void handle(ActionEvent event)
-			{
-				if (isHistoryShown) { ta.setText(reader.getRecords(++dayOffset)); }
-			}
-		});
-		
 		btnChooseFile.setOnAction(new EventHandler<ActionEvent>()
 		{
 			@Override
@@ -146,13 +159,38 @@ public final class UserInterface extends Application {
 				}		
 			}
 		});
+		
+		btnCategorized.setOnAction(new EventHandler<ActionEvent>()
+		{
+			@Override
+			public void handle(ActionEvent event)
+			{
+				if (isCategorized) { 
+					btnCategorized.setText("Categorized");
+				} else {
+					btnCategorized.setText("Uncategorized");
+				}
+				isCategorized = !isCategorized;
+				ta.setText(isHistoryShown ? reader.getRecords(dayOffset, isCategorized) : "");
+			}
+		});
+		
+		btnNext.setOnAction(new EventHandler<ActionEvent>()
+		{
 
-		HBox topPane = new HBox(10, btnStart, tf, btnStop, statusLabel);
+			@Override
+			public void handle(ActionEvent event)
+			{
+				if (isHistoryShown) { ta.setText(reader.getRecords(++dayOffset, isCategorized)); }
+			}
+		});
+
+		HBox topPane = new HBox(10, btnStart, tf, btnStop, btnPause, statusLabel);
 		topPane.setMinHeight(30);
-		HBox bottomPane = new HBox(30, btnPrevious, btnChooseFile, btnShowHide, btnNext);
+		HBox bottomPane = new HBox(10, btnPrevious, btnChooseFile, btnShowHide, btnCategorized, btnNext);
 		VBox pane = new VBox(10, topPane, ta, bottomPane);
 		
-		Scene scene = new Scene(pane, 380, 250);
+		Scene scene = new Scene(pane, 450, 250);
 		tf.requestFocus();
 		
 		primaryStage.setTitle("Planner");
@@ -162,27 +200,32 @@ public final class UserInterface extends Application {
 		{
 			@Override
 			public void handle(WindowEvent event) {
-				if (entry != null && isRecording) { reader.writeEnd(entry); }
+				if (entry != null && isRecording) { reader.writeDate(entry, false, true); }
 			}
 		});
+		System.out.println(reader.checkFile());
+	}
+	
+	private void pauseRecording() {
 	}
 	
 	private void setUItoRecording(boolean setOn) {
 		btnStart.setDisable(setOn);
 		btnStop.setDisable(!setOn);
 		btnStart.setDefaultButton(!setOn);
-		btnStop.setDefaultButton(setOn);
+		btnPause.setDefaultButton(setOn);
 		btnPrevious.setDisable(setOn);
 		btnNext.setDisable(setOn);
 		btnChooseFile.setDisable(setOn);
 		btnShowHide.setDisable(setOn);
+		btnPause.setDisable(!setOn);
 	}
 	
 	private void popUpWindow(String title, String message, boolean fatal) {
 		errorLabel = new Label(message);
 		Button btnClose = new Button("Close");
 
-		VBox topPane = new VBox(10, errorLabel, new Label(""), btnClose);
+		VBox topPane = new VBox(10, errorLabel, new Label(), btnClose);
 		topPane.setAlignment(Pos.BASELINE_CENTER);
 
 		Scene secondScene = new Scene(topPane, 280, 100);

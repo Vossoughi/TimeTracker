@@ -12,25 +12,21 @@ import java.util.Date;
  */
 public class Entry {
 	
-	Date start;
-	Date end;
+	Date time;
 	String subject;
     String note;
 
 	// Constructors
-	
 	public Entry(String subject, String note) {
 		this.subject = subject;
 		this.note = note;
-		start = new CustomDate();
 	}
 	
 	public Entry(String subject) {
 		this(subject, "");
 	}
 	
-	// Accessors and Mutators
-	
+	// Accessors and Mutators	
 	public String getSubject() {
 		return subject;
 	}
@@ -47,18 +43,14 @@ public class Entry {
 		note = newNote;
 	}
 	
-	public long getStartDate() {
-		return start.getTime();
-	}
-	
-	public long getEndDate() {
-		end = new CustomDate();
-		return end.getTime();
+	public long getDate() {
+		CustomDate now = new CustomDate();
+		return now.getTime();
 	}
 	
 	public boolean hasDate(int year, int month, int day) {
 		Calendar cal = Calendar.getInstance();
-		cal.setTime(start);
+		cal.setTime(time);
 		return cal.get(Calendar.DAY_OF_MONTH) == day && cal.get(Calendar.MONTH) == month && cal.get(Calendar.YEAR) == year;
 	}
 

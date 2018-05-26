@@ -43,5 +43,4 @@ public final class CustomDate extends Date {
 		otherCal.setTime(date);
 		return otherCal.get(Calendar.DAY_OF_MONTH) - otherCal2.get(Calendar.DAY_OF_MONTH);				
 	}
-
 }

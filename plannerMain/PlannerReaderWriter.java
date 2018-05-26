@@ -55,46 +55,73 @@ public final class PlannerReaderWriter {
 		}
 	}
 	
-	public String getRecords(int dayOffset) {
+	public String getRecords(int dayOffset, boolean isCategorized) {
 		String stringToDisplay = "";
-		int totalHours = 0;
+		String subject = "";
+		int dayTotal = 0;		
+		HashMap<String, Integer> entriesMap = new HashMap<>();
         CustomDate today = new CustomDate();
 		
 		try (Scanner scan = new Scanner(new File(filePath))) {
-			scan.nextLine();
+			scan.nextLine();			
 			while (scan.hasNextLine()) {
-				String subject = scan.next();
-				long startDateSeconds = scan.nextLong();
-				long endDateSeconds = scan.nextLong();
+				ArrayList<Long> timeEntries = new ArrayList<>();
+				int entryTotal = 0;
+				try(Scanner scanLine = new Scanner(scan.nextLine())) {
+					subject = scanLine.next();
+					while (scanLine.hasNextLong()) {
+						timeEntries.add(scanLine.nextLong());
+					}
+				}
+				if (timeEntries.size() % 2 == 1) { timeEntries.remove(timeEntries.size() - 1); }
 				
-				CustomDate thisDay = new CustomDate(startDateSeconds);		
-                if (CustomDate.dayDifference(thisDay, today) == dayOffset) {
-                	int duration = (int) ((endDateSeconds - startDateSeconds) / 1000l);
-    				totalHours += duration;
-    				stringToDisplay += subject + " " + secondsToDate(duration) + "\n";
-                }
-							
+				CustomDate thisDay = new CustomDate(timeEntries.get(0));		
+                if (CustomDate.dayDifference(thisDay, today) == dayOffset) {             	
+    				for (int i = timeEntries.size() - 1; i >= 0; i -= 2) {
+    					entryTotal += (timeEntries.get(i) - timeEntries.get(i - 1));
+    				}
+                	int duration = (int) (entryTotal / 1000l);
+                	
+                	// New
+                	if (entriesMap.containsKey(subject)) {
+    					entriesMap.replace(subject, entriesMap.get(subject) + duration);
+    				} else {
+    					entriesMap.put(subject, duration);
+    				}
+                	
+                	if (!isCategorized) {
+                		dayTotal += duration;
+        				stringToDisplay += subject + " " + secondsToDate(duration) + "\n";
+                	}
+                	// *********
+                }						
 			}	
 		} catch(IOException e) {
 			System.err.println(e.getMessage());
 		}
-		stringToDisplay += "TOTAL --> " + secondsToDate(totalHours);
+		// New
+		if (isCategorized) {
+			for (Map.Entry<String, Integer> entry : entriesMap.entrySet()) {
+				stringToDisplay += entry.getKey() + " " + secondsToDate(entry.getValue()) + "\n";
+			    dayTotal += entry.getValue();		    
+			}
+		}
+		// *********
+		stringToDisplay += "TOTAL --> " + secondsToDate(dayTotal);
 		
 		return stringToDisplay;
 	}
 	
-	public void writeStart(Entry entry) {
+	public void writeDate(Entry entry, boolean isStart, boolean isEnd) {
 		try(FileWriter writer = new FileWriter(filePath, true)) {
-			String entryString = "\n" + entry.getSubject() + " " + entry.getStartDate() + " ";
-			writer.write(entryString);
-		} catch (IOException e) {
-			System.err.println(e.getMessage());
-		}
-	}
-
-	public void writeEnd(Entry entry) {
-		try(FileWriter writer = new FileWriter(filePath, true)) {
-			String entryString = entry.getEndDate() + "";
+			String entryString = "";
+			if (isStart) {
+				entryString = "\n" + entry.getSubject() + " " + entry.getDate() + " ";
+			} else if (isEnd) {
+				entryString = entry.getDate() + "";
+			} else {
+				entryString = entry.getDate() + " ";
+			}			
 			writer.write(entryString);
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
@@ -107,17 +134,20 @@ public final class PlannerReaderWriter {
 		try(Scanner scan = new Scanner(file)) {
 			scan.nextLine();
 			while (scan.hasNextLine() && fileOK) {
-				scan.next();
-				String startTime = scan.next();
-				String endTime = scan.next();
-				try {
-					Long.parseLong(startTime);
-					Long.parseLong(endTime);
-				} catch (NumberFormatException e) {
-					fileOK = false;
+				try(Scanner scanLine = new Scanner(scan.nextLine())) {
+					scanLine.next();
+					while (scanLine.hasNext() && fileOK) {
+						String timeEntry = scanLine.next();
+						try {
+							Long.parseLong(timeEntry);
+						} catch (NumberFormatException e) {
+							System.out.println(timeEntry);
+							fileOK = false;
+						}
+					}
 				}
 			}	
-		} catch(IOException e) {
+		} catch (IOException e) {
 			System.err.println(e.getMessage());
 		}
 		return fileOK;
